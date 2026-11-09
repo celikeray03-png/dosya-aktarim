@@ -302,22 +302,20 @@
     </div>
 
     <script>
-        // Rastgele 4 karakterli kısa kod üretici
         function generateShortId() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let result = '';
             for (let i = 0; i < 4; i++) {
-                result += chars.charAt(floor(Math.random() * chars.length));
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             return result;
         }
 
-        const CHUNK_SIZE = 16384; // 16KB parçalar halinde veri iletimi
+        const CHUNK_SIZE = 16384;
         let peer = null;
         let conn = null;
         let myId = generateShortId();
 
-        // DOM Elemanları
         const myCodeEl = document.getElementById('myCode');
         const qrcodeEl = document.getElementById('qrcode');
         const statusDot = document.getElementById('statusDot');
@@ -333,21 +331,16 @@
         const progressPercent = document.getElementById('progressPercent');
         const progressStatus = document.getElementById('progressStatus');
 
-        // URL'den bağ parametresi kontrolü (QR Okutma için)
         const urlParams = new URLSearchParams(window.location.search);
         const autoConnectId = urlParams.get('connect');
 
-        // PeerJS Başlatma
         function initPeer() {
-            peer = new Peer(myId, {
-                debug: 1
-            });
+            peer = new Peer(myId, { debug: 1 });
 
             peer.on('open', (id) => {
                 myCodeEl.textContent = id;
                 statusText.textContent = 'Bağlantıya hazır';
                 
-                // QR Kod Oluştur
                 const currentUrl = window.location.href.split('?')[0];
                 qrcodeEl.innerHTML = '';
                 new QRCode(qrcodeEl, {
@@ -357,7 +350,6 @@
                     correctLevel: QRCode.CorrectLevel.L
                 });
 
-                // Otomatik Bağlantı İsteği Varsa
                 if (autoConnectId && autoConnectId !== id) {
                     targetIdInput.value = autoConnectId;
                     connectToPeer(autoConnectId);
@@ -374,14 +366,12 @@
             });
         }
 
-        // Karşı tarafa bağlan
         function connectToPeer(targetId) {
             statusText.textContent = 'Bağlanılıyor...';
             const outgoingConn = peer.connect(targetId.toUpperCase());
             setupConnection(outgoingConn);
         }
 
-        // Bağlantı Dinleyicileri
         function setupConnection(connection) {
             conn = connection;
 
@@ -397,7 +387,6 @@
             let receiveBuffer = [];
 
             conn.on('data', (data) => {
-                // Metalink / Başlık Verisi Geldiğinde
                 if (data.type === 'header') {
                     incomingFileInfo = data;
                     receivedBytes = 0;
@@ -407,7 +396,6 @@
                     return;
                 }
 
-                // Parça Verisi Geldiğinde
                 if (data.type === 'chunk') {
                     receiveBuffer.push(data.chunk);
                     receivedBytes += data.chunk.byteLength;
@@ -417,7 +405,6 @@
                     progressPercent.textContent = pct + '%';
 
                     if (receivedBytes === incomingFileInfo.size) {
-                        // Dosya tamamlandı, otomatik indir
                         const blob = new Blob(receiveBuffer, { type: incomingFileInfo.fileType });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
@@ -442,14 +429,12 @@
             });
         }
 
-        // Dosya Gönderme İşlemi
         function sendFile(file) {
             if (!conn || !conn.open) return;
 
             progressContainer.style.display = 'block';
             progressStatus.textContent = `Gönderiliyor: ${file.name}`;
 
-            // 1. Dosya Başlığını Gönder
             conn.send({
                 type: 'header',
                 name: file.name,
@@ -457,7 +442,6 @@
                 fileType: file.type
             });
 
-            // 2. Dosya Parçalarını Gönder
             let offset = 0;
             const reader = new FileReader();
 
@@ -491,7 +475,6 @@
             readNextChunk();
         }
 
-        // Event Listener'lar
         connectBtn.addEventListener('click', () => {
             const code = targetIdInput.value.trim();
             if (code) connectToPeer(code);
@@ -529,7 +512,6 @@
             }
         });
 
-        // Uygulamayı Başlat
         initPeer();
     </script>
 </body>
