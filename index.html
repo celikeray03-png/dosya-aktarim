@@ -1,320 +1,455 @@
 <!DOCTYPE html>
-<html lang="tr" class="dark">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yerel Ağ Dosya Transferi (P2P)</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0fdf4',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- PeerJS CDN -->
+    <title>Hızlı Dosya Transferi</title>
+    <!-- Favicon: Inline SVG Transfer İkonu -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3L21 7L17 11'/%3E%3Cpath d='M3 7H21'/%3E%3Cpath d='M7 21L3 17L7 13'/%3E%3Cpath d='M21 17H3'/%3E%3C/svg%3E">
+    
+    <!-- PeerJS & QR Code CDN -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- QR Code CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
         }
-        .light .glass {
-            background: rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(0, 0, 0, 0.08);
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 1px solid var(--border);
+            padding: 28px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .header p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .card {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .my-code-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .code-display {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            color: var(--primary);
+            background: #eef2ff;
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: 1px dashed var(--primary);
+        }
+
+        #qrcode {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            text-transform: uppercase;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+        }
+
+        button:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary);
+            background-color: #eef2ff;
+        }
+
+        .drop-zone svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--text-muted);
+        }
+
+        .drop-zone p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .drop-zone span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ef4444;
+        }
+
+        .status-dot.connected {
+            background-color: var(--success);
+        }
+
+        .progress-container {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            transition: width 0.1s linear;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between transition-colors duration-300 light:bg-slate-50 light:text-slate-800">
+<body>
 
-    <!-- Navbar Header -->
-    <header class="border-b border-slate-800 light:border-slate-200 px-6 py-4 flex justify-between items-center max-w-5xl w-full mx-auto">
-        <div class="flex items-center space-x-3">
-            <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
-                <i data-lucide="arrow-left-right" class="w-6 h-6"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-lg leading-none">AğTransfer</h1>
-                <span class="text-xs text-slate-400">P2P Doğrudan Dosya Paylaşımı</span>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3L21 7L17 11"/><path d="M3 7H21"/><path d="M7 21L3 17L7 13"/><path d="M21 17H3"/></svg>
+                Dosya Transferi
+            </h1>
+            <p>Aynı ağdaki cihazlar arası direkt aktarım</p>
+        </div>
+
+        <div class="status">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="statusText">Ağ bağlantısı bekleniyor...</span>
+        </div>
+
+        <!-- 1. Kendi Kodun / QR Kod -->
+        <div class="card my-code-section">
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Bu Cihazın Kodu</span>
+            <div id="myCode" class="code-display">----</div>
+            <div id="qrcode"></div>
+        </div>
+
+        <!-- 2. Bağlanma Alanı -->
+        <div id="connectSection" class="card">
+            <span style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 8px;">Karşı Cihaza Bağlan</span>
+            <div class="input-group">
+                <input type="text" id="targetIdInput" placeholder="Kodu girin (örn. 4K9L)" maxlength="4">
+                <button id="connectBtn">Bağlan</button>
             </div>
         </div>
 
-        <div class="flex items-center space-x-3">
-            <!-- Bağlantı Durumu Indicator -->
-            <div id="statusBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                <span id="statusText">Cihaz Kodu Bekleniyor...</span>
+        <!-- 3. Dosya Gönderme Alanı -->
+        <div id="transferSection" class="hidden">
+            <div class="drop-zone" id="dropZone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p>Dosyayı buraya sürükleyin veya <span>seçin</span></p>
+                <input type="file" id="fileInput">
             </div>
 
-            <!-- Tema Değiştirici -->
-            <button id="themeToggleBtn" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 transition light:bg-white light:border-slate-200 light:hover:bg-slate-100">
-                <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
-                <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="max-w-4xl w-full mx-auto px-4 py-8 flex-1 flex flex-col justify-center">
-
-        <!-- STEP 1: Bağlantı Kurma Ekranı -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            
-            <!-- Sol Kart: Kendi Cihaz Kodum -->
-            <div class="glass p-6 rounded-2xl relative">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                    <i data-lucide="smartphone" class="w-4 h-4"></i> Bu Cihazın Kodu
-                </h2>
-                
-                <div class="flex items-center justify-between bg-slate-900/80 light:bg-slate-100 p-3.5 rounded-xl border border-slate-800 light:border-slate-200 mb-4">
-                    <span id="myPeerId" class="font-mono font-bold text-lg text-emerald-400 tracking-wider">Oluşturuluyor...</span>
-                    <button id="copyIdBtn" title="Kodu Kopyala" class="p-2 hover:bg-slate-800 light:hover:bg-slate-200 rounded-lg text-slate-400 hover:text-white transition">
-                        <i data-lucide="copy" class="w-4 h-4"></i>
-                    </button>
+            <div id="progressContainer" class="progress-container">
+                <div class="progress-info">
+                    <span id="progressStatus">Gönderiliyor...</span>
+                    <span id="progressPercent">0%</span>
                 </div>
-
-                <div class="flex items-center justify-center">
-                    <button id="showQrBtn" class="text-xs text-slate-400 hover:text-emerald-400 flex items-center gap-1 transition">
-                        <i data-lucide="qr-code" class="w-4 h-4"></i> QR Kod ile Bağlan
-                    </button>
+                <div class="progress-bar-bg">
+                    <div id="progressBar" class="progress-bar-fill"></div>
                 </div>
-
-                <!-- QR Modal / Container (Gizli) -->
-                <div id="qrContainer" class="hidden absolute inset-0 bg-slate-950/95 light:bg-white/95 rounded-2xl flex flex-col items-center justify-center p-6 z-10">
-                    <div id="qrcode" class="p-3 bg-white rounded-xl shadow-lg mb-4"></div>
-                    <p class="text-xs text-slate-400 text-center mb-4">Diğer cihazın kamerasıyla bu kodu taratın</p>
-                    <button id="closeQrBtn" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg font-medium transition">Kapat</button>
-                </div>
-            </div>
-
-            <!-- Sağ Kart: Karşı Cihaza Bağlan -->
-            <div class="glass p-6 rounded-2xl flex flex-col justify-between">
-                <div>
-                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                        <i data-lucide="link" class="w-4 h-4"></i> Başka Cihaza Bağlan
-                    </h2>
-                    
-                    <div class="flex space-x-2 mb-3">
-                        <input type="text" id="targetPeerId" placeholder="Karşı tarafın 6 haneli kodunu girin" 
-                               class="flex-1 bg-slate-900/80 light:bg-slate-100 border border-slate-800 light:border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 font-mono tracking-wider">
-                        <button id="connectBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-3 rounded-xl text-sm transition flex items-center gap-2">
-                            <span>Bağlan</span>
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <p class="text-xs text-slate-500 light:text-slate-400">
-                    <i data-lucide="shield-check" class="w-3.5 h-3.5 inline mr-1 text-emerald-500"></i> Dosyalar doğrudan iki cihaz arasında iletilir, hiçbir sunucuya yüklenmez.
-                </p>
             </div>
         </div>
 
-        <!-- STEP 2: Dosya Gönderim ve İlerleme Alanı -->
-        <div id="transferArea" class="glass p-8 rounded-2xl transition-all duration-300 opacity-50 pointer-events-none">
-            
-            <!-- Dropzone -->
-            <div id="dropZone" class="border-2 border-dashed border-slate-700 light:border-slate-300 hover:border-emerald-500/50 light:hover:border-emerald-500 rounded-xl p-8 text-center transition cursor-pointer bg-slate-900/30 light:bg-slate-100/50">
-                <input type="file" id="fileInput" class="hidden">
-                <div class="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="upload-cloud" class="w-7 h-7"></i>
-                </div>
-                <h3 class="font-semibold text-base mb-1">Göndermek İçin Dosya Seçin veya Sürükleyin</h3>
-                <p class="text-xs text-slate-400 max-w-sm mx-auto">Herhangi bir boyut sınırı yoktur. Dosya doğrudan karşı cihaza aktarılır.</p>
-            </div>
-
-            <!-- Transfer İlerleme Listesi -->
-            <div id="transferList" class="mt-6 space-y-4">
-                <!-- Dinamik Transfer Elemanları Buraya Eklenecek -->
-            </div>
+        <div class="footer">
+            Uçtan uca şifreli • Veriler sunucuya yüklenmez (P2P)
         </div>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="py-4 text-center text-xs text-slate-500 border-t border-slate-900 light:border-slate-200">
-        <p>Aynı Wi-Fi/Ağ üzerindeki tüm masaüstü, dizüstü ve mobil cihazlarda çalışır.</p>
-    </footer>
-
-    <!-- Bildirim Toast (Toast Notification) -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-slate-100 border border-slate-700 px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 transition-all duration-300 transform translate-y-20 opacity-0 z-50">
-        <i data-lucide="info" id="toastIcon" class="w-5 h-5 text-emerald-400"></i>
-        <span id="toastMessage" class="text-sm">Bildirim mesajı</span>
     </div>
 
-    <!-- Uygulama Mantığı (JavaScript) -->
     <script>
-        // Icons başlatma
-        lucide.createIcons();
-
-        // Global Değişkenler
-        let peer = null;
-        let conn = null;
-        let myId = '';
-        const CHUNK_SIZE = 16384; // 16 KB parçalar halinde transfer (WebRTC uyumlu)
-        
-        // Alıcı Tarafı İçin Değişkenler
-        let incomingFileInfo = null;
-        let receivedBuffer = [];
-        let bytesReceived = 0;
-
-        // UI Elemanları
-        const myPeerIdEl = document.getElementById('myPeerId');
-        const targetPeerIdInput = document.getElementById('targetPeerId');
-        const connectBtn = document.getElementById('connectBtn');
-        const copyIdBtn = document.getElementById('copyIdBtn');
-        const statusBadge = document.getElementById('statusBadge');
-        const statusText = document.getElementById('statusText');
-        const transferArea = document.getElementById('transferArea');
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const transferList = document.getElementById('transferList');
-        const showQrBtn = document.getElementById('showQrBtn');
-        const closeQrBtn = document.getElementById('closeQrBtn');
-        const qrContainer = document.getElementById('qrContainer');
-        const themeToggleBtn = document.getElementById('themeToggleBtn');
-
-        // Random 6 Haneli ID Oluşturucu
+        // Rastgele 4 karakterli kısa kod üretici
         function generateShortId() {
-            return Math.floor(100000 + Math.random() * 900000).toString();
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+                result += chars.charAt(floor(Math.random() * chars.length));
+            }
+            return result;
         }
 
-        // PeerJS Sunucusuna Bağlanma
+        const CHUNK_SIZE = 16384; // 16KB parçalar halinde veri iletimi
+        let peer = null;
+        let conn = null;
+        let myId = generateShortId();
+
+        // DOM Elemanları
+        const myCodeEl = document.getElementById('myCode');
+        const qrcodeEl = document.getElementById('qrcode');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const targetIdInput = document.getElementById('targetIdInput');
+        const connectBtn = document.getElementById('connectBtn');
+        const connectSection = document.getElementById('connectSection');
+        const transferSection = document.getElementById('transferSection');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressStatus = document.getElementById('progressStatus');
+
+        // URL'den bağ parametresi kontrolü (QR Okutma için)
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoConnectId = urlParams.get('connect');
+
+        // PeerJS Başlatma
         function initPeer() {
-            const customId = generateShortId();
-            peer = new Peer(customId, {
+            peer = new Peer(myId, {
                 debug: 1
             });
 
             peer.on('open', (id) => {
-                myId = id;
-                myPeerIdEl.innerText = id;
-                updateStatus('waiting', 'Cihaz Hazır. Bağlantı Bekleniyor');
+                myCodeEl.textContent = id;
+                statusText.textContent = 'Bağlantıya hazır';
                 
-                // QR Kod oluştur
-                generateQRCode(id);
+                // QR Kod Oluştur
+                const currentUrl = window.location.href.split('?')[0];
+                qrcodeEl.innerHTML = '';
+                new QRCode(qrcodeEl, {
+                    text: `${currentUrl}?connect=${id}`,
+                    width: 128,
+                    height: 128,
+                    correctLevel: QRCode.CorrectLevel.L
+                });
 
-                // URL'de peer parametresi var mı kontrol et
-                const urlParams = new URLSearchParams(window.location.search);
-                const joinId = urlParams.get('join');
-                if (joinId) {
-                    targetPeerIdInput.value = joinId;
-                    connectToPeer(joinId);
+                // Otomatik Bağlantı İsteği Varsa
+                if (autoConnectId && autoConnectId !== id) {
+                    targetIdInput.value = autoConnectId;
+                    connectToPeer(autoConnectId);
                 }
             });
 
             peer.on('connection', (incomingConn) => {
-                // Karşı cihaz bize bağlandığında
                 setupConnection(incomingConn);
             });
 
             peer.on('error', (err) => {
-                console.error("PeerJS Hatası:", err);
-                showToast("Bağlantı hatası oluştu: " + err.type, "error");
-                updateStatus('disconnected', 'Bağlantı Hatası');
+                console.error(err);
+                statusText.textContent = 'Hata oluştu. Yeniden deneniyor...';
             });
         }
 
-        // Karşı Taraf ile Bağlantı Kurma
+        // Karşı tarafa bağlan
         function connectToPeer(targetId) {
-            if (!targetId) {
-                showToast("Lütfen geçerli bir cihaz kodu girin", "error");
-                return;
-            }
-            if (targetId === myId) {
-                showToast("Kendi cihaz kodunuza bağlanamazsınız", "error");
-                return;
-            }
-
-            updateStatus('connecting', 'Bağlanılıyor...');
-            const outgoingConn = peer.connect(targetId, { reliable: true });
+            statusText.textContent = 'Bağlanılıyor...';
+            const outgoingConn = peer.connect(targetId.toUpperCase());
             setupConnection(outgoingConn);
         }
 
-        // Bağlantı Olaylarını Yönetme
+        // Bağlantı Dinleyicileri
         function setupConnection(connection) {
             conn = connection;
 
             conn.on('open', () => {
-                updateStatus('connected', 'Bağlantı Kuruldu');
-                enableTransferArea();
-                showToast("Cihaz ile bağlantı başarıyla sağlandı!", "success");
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Cihaz bağlandı!';
+                connectSection.classList.add('hidden');
+                transferSection.classList.remove('hidden');
             });
 
+            let incomingFileInfo = null;
+            let receivedBytes = 0;
+            let receiveBuffer = [];
+
             conn.on('data', (data) => {
-                handleIncomingData(data);
+                // Metalink / Başlık Verisi Geldiğinde
+                if (data.type === 'header') {
+                    incomingFileInfo = data;
+                    receivedBytes = 0;
+                    receiveBuffer = [];
+                    progressContainer.style.display = 'block';
+                    progressStatus.textContent = `Alınıyor: ${data.name}`;
+                    return;
+                }
+
+                // Parça Verisi Geldiğinde
+                if (data.type === 'chunk') {
+                    receiveBuffer.push(data.chunk);
+                    receivedBytes += data.chunk.byteLength;
+
+                    let pct = Math.floor((receivedBytes / incomingFileInfo.size) * 100);
+                    progressBar.style.width = pct + '%';
+                    progressPercent.textContent = pct + '%';
+
+                    if (receivedBytes === incomingFileInfo.size) {
+                        // Dosya tamamlandı, otomatik indir
+                        const blob = new Blob(receiveBuffer, { type: incomingFileInfo.fileType });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = incomingFileInfo.name;
+                        a.click();
+
+                        progressStatus.textContent = 'İndirme tamamlandı!';
+                        setTimeout(() => {
+                            progressContainer.style.display = 'none';
+                            progressBar.style.width = '0%';
+                        }, 3000);
+                    }
+                }
             });
 
             conn.on('close', () => {
-                updateStatus('disconnected', 'Bağlantı Kesildi');
-                disableTransferArea();
-                showToast("Karşı cihaz ile bağlantı koptu", "error");
-            });
-
-            conn.on('error', (err) => {
-                showToast("Bağlantı hatası!", "error");
-                console.error(err);
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Bağlantı kesildi.';
+                connectSection.classList.remove('hidden');
+                transferSection.classList.add('hidden');
             });
         }
 
-        // Durum Göstergesini Güncelleme
-        function updateStatus(state, text) {
-            statusText.innerText = text;
-            statusBadge.className = "flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ";
-            
-            if (state === 'waiting') {
-                statusBadge.classList.add('bg-amber-500/10', 'text-amber-400', 'border-amber-500/20');
-                statusBadge.querySelector('span').className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-            } else if (state === 'connecting') {
-                statusBadge.classList.add('bg-blue-500/10', 'text-blue-400', 'border-blue-500/20');
-                statusBadge.querySelector('span').className = "w-2 h-2 rounded-full bg-blue-400 animate-ping";
-            } else if (state === 'connected') {
-                statusBadge.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/20');
-                statusBadge.querySelector('span').className = "w-2 h-2 rounded-full bg-emerald-400";
-            } else {
-                statusBadge.classList.add('bg-rose-500/10', 'text-rose-400', 'border-rose-500/20');
-                statusBadge.querySelector('span').className = "w-2 h-2 rounded-full bg-rose-400";
-            }
-        }
-
-        function enableTransferArea() {
-            transferArea.classList.remove('opacity-50', 'pointer-events-none');
-        }
-
-        function disableTransferArea() {
-            transferArea.classList.add('opacity-50', 'pointer-events-none');
-        }
-
-        // DOSYA GÖNDERİMİ (SENDER)
+        // Dosya Gönderme İşlemi
         function sendFile(file) {
-            if (!conn || !conn.open) {
-                showToast("Aktarım için önce bir cihaza bağlanmalısınız", "error");
-                return;
-            }
+            if (!conn || !conn.open) return;
 
-            const transferId = 'tr-' + Date.now();
-            createTransferUI(transferId, file.name, file.size, 'upload');
+            progressContainer.style.display = 'block';
+            progressStatus.textContent = `Gönderiliyor: ${file.name}`;
 
-            // 1. Meta Verisini Gönder
+            // 1. Dosya Başlığını Gönder
             conn.send({
                 type: 'header',
                 name: file.name,
@@ -322,28 +457,29 @@
                 fileType: file.type
             });
 
-            // 2. Dosyayı Chunk'lar Halinde Oku ve Gönder
-            const reader = new FileReader();
+            // 2. Dosya Parçalarını Gönder
             let offset = 0;
+            const reader = new FileReader();
 
             reader.onload = (e) => {
-                if (!conn.open) return;
-                
                 conn.send({
                     type: 'chunk',
-                    data: e.target.result
+                    chunk: e.target.result
                 });
 
                 offset += e.target.result.byteLength;
-                const progress = Math.min(100, Math.round((offset / file.size) * 100));
-                updateProgressUI(transferId, progress, offset, file.size);
+                let pct = Math.floor((offset / file.size) * 100);
+                progressBar.style.width = pct + '%';
+                progressPercent.textContent = pct + '%';
 
                 if (offset < file.size) {
                     readNextChunk();
                 } else {
-                    // Tamamlandı
-                    completeTransferUI(transferId);
-                    showToast(`${file.name} başarıyla gönderildi`, "success");
+                    progressStatus.textContent = 'Gönderim tamamlandı!';
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        progressBar.style.width = '0%';
+                    }, 3000);
                 }
             };
 
@@ -355,202 +491,46 @@
             readNextChunk();
         }
 
-        // DOSYA ALIMI (RECEIVER)
-        function handleIncomingData(data) {
-            if (data.type === 'header') {
-                // Yeni Dosya Transferi Başlıyor
-                incomingFileInfo = data;
-                receivedBuffer = [];
-                bytesReceived = 0;
-                incomingFileInfo.transferId = 'tr-' + Date.now();
-
-                createTransferUI(incomingFileInfo.transferId, incomingFileInfo.name, incomingFileInfo.size, 'download');
-            } else if (data.type === 'chunk') {
-                // Parça Veri Alındı
-                receivedBuffer.push(data.data);
-                bytesReceived += data.data.byteLength;
-
-                const progress = Math.min(100, Math.round((bytesReceived / incomingFileInfo.size) * 100));
-                updateProgressUI(incomingFileInfo.transferId, progress, bytesReceived, incomingFileInfo.size);
-
-                if (bytesReceived >= incomingFileInfo.size) {
-                    // Transfer Tamamlandı - Dosyayı Birleştir ve İndir
-                    const blob = new Blob(receivedBuffer, { type: incomingFileInfo.fileType || 'application/octet-stream' });
-                    triggerDownload(blob, incomingFileInfo.name);
-                    completeTransferUI(incomingFileInfo.transferId);
-                    showToast(`${incomingFileInfo.name} başarıyla alındı ve indirildi!`, "success");
-
-                    // Temizlik
-                    incomingFileInfo = null;
-                    receivedBuffer = [];
-                }
-            }
-        }
-
-        // Otomatik İndirme Tetikleyici
-        function triggerDownload(blob, filename) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 100);
-        }
-
-        // TRANSFER ARAYÜZ (UI) ELEMANLARI
-        function createTransferUI(id, filename, filesize, direction) {
-            const isUpload = direction === 'upload';
-            const icon = isUpload ? 'upload' : 'download';
-            const colorClass = isUpload ? 'text-blue-400' : 'text-emerald-400';
-
-            const itemHTML = `
-                <div id="${id}" class="bg-slate-900/60 light:bg-white p-4 rounded-xl border border-slate-800 light:border-slate-200">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-3 overflow-hidden">
-                            <div class="p-2 bg-slate-800 light:bg-slate-100 rounded-lg ${colorClass}">
-                                <i data-lucide="${icon}" class="w-5 h-5"></i>
-                            </div>
-                            <div class="truncate">
-                                <p class="font-medium text-sm truncate">${filename}</p>
-                                <p class="text-xs text-slate-400">${formatBytes(filesize)}</p>
-                            </div>
-                        </div>
-                        <span class="status-percentage font-mono text-xs font-semibold text-slate-400">0%</span>
-                    </div>
-                    <!-- Progress Bar -->
-                    <div class="w-full bg-slate-800 light:bg-slate-200 h-2 rounded-full overflow-hidden">
-                        <div class="progress-bar bg-emerald-500 h-full w-0 transition-all duration-150"></div>
-                    </div>
-                </div>
-            `;
-            transferList.insertAdjacentHTML('afterbegin', itemHTML);
-            lucide.createIcons();
-        }
-
-        function updateProgressUI(id, percent, currentBytes, totalBytes) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            
-            const bar = el.querySelector('.progress-bar');
-            const percentText = el.querySelector('.status-percentage');
-
-            bar.style.width = `${percent}%`;
-            percentText.innerText = `${percent}%`;
-        }
-
-        function completeTransferUI(id) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const percentText = el.querySelector('.status-percentage');
-            percentText.innerText = "Tamamlandı";
-            percentText.classList.replace('text-slate-400', 'text-emerald-400');
-        }
-
-        // Yardımcı Fonksiyonlar
-        function formatBytes(bytes, decimals = 2) {
-            if (bytes === 0) return '0 Byte';
-            const k = 1024;
-            const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
-            const toastIcon = document.getElementById('toastIcon');
-
-            toastMessage.innerText = message;
-            
-            if (type === 'error') {
-                toastIcon.setAttribute('data-lucide', 'alert-circle');
-                toastIcon.className = "w-5 h-5 text-rose-400";
-            } else if (type === 'success') {
-                toastIcon.setAttribute('data-lucide', 'check-circle');
-                toastIcon.className = "w-5 h-5 text-emerald-400";
-            } else {
-                toastIcon.setAttribute('data-lucide', 'info');
-                toastIcon.className = "w-5 h-5 text-blue-400";
-            }
-            lucide.createIcons();
-
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3500);
-        }
-
-        function generateQRCode(id) {
-            const qrElement = document.getElementById("qrcode");
-            qrElement.innerHTML = "";
-            const currentUrl = window.location.origin + window.location.pathname + '?join=' + id;
-            new QRCode(qrElement, {
-                text: currentUrl,
-                width: 160,
-                height: 160,
-                colorDark : "#0f172a",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-        }
-
-        // EVENT LISTENERS
+        // Event Listener'lar
         connectBtn.addEventListener('click', () => {
-            const targetId = targetPeerIdInput.value.trim();
-            connectToPeer(targetId);
+            const code = targetIdInput.value.trim();
+            if (code) connectToPeer(code);
         });
 
-        copyIdBtn.addEventListener('click', () => {
-            if (myId) {
-                navigator.clipboard.writeText(myId);
-                showToast("Cihaz kodu kopyalandı", "success");
+        targetIdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const code = targetIdInput.value.trim();
+                if (code) connectToPeer(code);
             }
         });
 
-        // Drag and Drop
         dropZone.addEventListener('click', () => fileInput.click());
-        
+
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 sendFile(e.target.files[0]);
-                fileInput.value = ''; // Input'u sıfırla
             }
         });
 
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropZone.classList.add('border-emerald-500', 'bg-emerald-500/5');
+            dropZone.classList.add('dragover');
         });
 
         dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('border-emerald-500', 'bg-emerald-500/5');
+            dropZone.classList.remove('dragover');
         });
 
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropZone.classList.remove('border-emerald-500', 'bg-emerald-500/5');
+            dropZone.classList.remove('dragover');
             if (e.dataTransfer.files.length > 0) {
                 sendFile(e.dataTransfer.files[0]);
             }
         });
 
-        // QR Modal Toggle
-        showQrBtn.addEventListener('click', () => qrContainer.classList.remove('hidden'));
-        closeQrBtn.addEventListener('click', () => qrContainer.classList.add('hidden'));
-
-        // Theme Toggle (Karanlık / Aydınlık Mod)
-        themeToggleBtn.addEventListener('click', () => {
-            document.documentElement.classList.toggle('dark');
-            document.documentElement.classList.toggle('light');
-        });
-
         // Uygulamayı Başlat
-        window.addEventListener('load', initPeer);
+        initPeer();
     </script>
 </body>
 </html>
