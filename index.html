@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hızlı Dosya Transferi</title>
+    <title>Hızlı Dosya ve Metin Transferi</title>
     <!-- Favicon: Inline SVG Transfer İkonu -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3L21 7L17 11'/%3E%3Cpath d='M3 7H21'/%3E%3Cpath d='M7 21L3 17L7 13'/%3E%3Cpath d='M21 17H3'/%3E%3C/svg%3E">
     
@@ -110,7 +110,7 @@
             gap: 8px;
         }
 
-        input[type="text"] {
+        input[type="text"], textarea {
             flex: 1;
             padding: 12px 16px;
             border-radius: 8px;
@@ -118,10 +118,20 @@
             font-size: 1rem;
             outline: none;
             transition: border-color 0.2s;
+        }
+
+        input[type="text"] {
             text-transform: uppercase;
         }
 
-        input[type="text"]:focus {
+        textarea {
+            width: 100%;
+            height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus, textarea:focus {
             border-color: var(--primary);
         }
 
@@ -141,16 +151,19 @@
             background: var(--primary-hover);
         }
 
-        button:disabled {
-            background: var(--text-muted);
-            cursor: not-allowed;
-            opacity: 0.6;
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
         }
 
         .drop-zone {
             border: 2px dashed var(--border);
             border-radius: 12px;
-            padding: 32px 20px;
+            padding: 24px 20px;
             text-align: center;
             cursor: pointer;
             transition: border-color 0.2s, background-color 0.2s;
@@ -158,6 +171,7 @@
             flex-direction: column;
             align-items: center;
             gap: 8px;
+            margin-bottom: 16px;
         }
 
         .drop-zone:hover, .drop-zone.dragover {
@@ -166,8 +180,8 @@
         }
 
         .drop-zone svg {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             stroke: var(--text-muted);
         }
 
@@ -206,7 +220,7 @@
         }
 
         .progress-container {
-            margin-top: 16px;
+            margin-top: 12px;
             display: none;
         }
 
@@ -233,6 +247,19 @@
             color: var(--text-muted);
         }
 
+        .received-text-box {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.95rem;
+            word-break: break-all;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-bottom: 8px;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -251,7 +278,7 @@
         <div class="header">
             <h1>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3L21 7L17 11"/><path d="M3 7H21"/><path d="M7 21L3 17L7 13"/><path d="M21 17H3"/></svg>
-                Dosya Transferi
+                Dosya ve Metin Transferi
             </h1>
             <p>Aynı ağdaki cihazlar arası direkt aktarım</p>
         </div>
@@ -277,14 +304,31 @@
             </div>
         </div>
 
-        <!-- 3. Dosya Gönderme Alanı -->
+        <!-- 3. Transfer Alanı (Bağlanınca Görünür) -->
         <div id="transferSection" class="hidden">
+            
+            <!-- Dosya Gönderme -->
             <div class="drop-zone" id="dropZone">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <p>Dosyayı buraya sürükleyin veya <span>seçin</span></p>
                 <input type="file" id="fileInput">
             </div>
 
+            <!-- Metin Gönderme -->
+            <div class="card" style="margin-bottom: 16px;">
+                <span style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 8px;">Metin / Link Gönder</span>
+                <textarea id="textToSend" placeholder="Göndermek istediğiniz metni veya adresi buraya yazın/yapıştırın..."></textarea>
+                <button id="sendTextBtn" style="width: 100%; margin-top: 8px;">Metni Gönder</button>
+            </div>
+
+            <!-- Gelen Metin Kutusu (Geldikçe Açılır) -->
+            <div id="receivedTextCard" class="card hidden">
+                <span style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 8px;">Gelen Metin</span>
+                <div id="receivedText" class="received-text-box"></div>
+                <button id="copyTextBtn" class="btn-secondary" style="width: 100%;">Metni Kopyala</button>
+            </div>
+
+            <!-- İlerleme Çubuğu -->
             <div id="progressContainer" class="progress-container">
                 <div class="progress-info">
                     <span id="progressStatus">Gönderiliyor...</span>
@@ -294,6 +338,7 @@
                     <div id="progressBar" class="progress-bar-fill"></div>
                 </div>
             </div>
+
         </div>
 
         <div class="footer">
@@ -330,6 +375,13 @@
         const progressBar = document.getElementById('progressBar');
         const progressPercent = document.getElementById('progressPercent');
         const progressStatus = document.getElementById('progressStatus');
+        
+        // Metin Aktarımı DOM Elemanları
+        const textToSend = document.getElementById('textToSend');
+        const sendTextBtn = document.getElementById('sendTextBtn');
+        const receivedTextCard = document.getElementById('receivedTextCard');
+        const receivedText = document.getElementById('receivedText');
+        const copyTextBtn = document.getElementById('copyTextBtn');
 
         const urlParams = new URLSearchParams(window.location.search);
         const autoConnectId = urlParams.get('connect');
@@ -387,6 +439,15 @@
             let receiveBuffer = [];
 
             conn.on('data', (data) => {
+                // METİN GELİRSE
+                if (data.type === 'text') {
+                    receivedTextCard.classList.remove('hidden');
+                    receivedText.textContent = data.content;
+                    copyTextBtn.textContent = 'Metni Kopyala';
+                    return;
+                }
+
+                // DOSYA BAŞLIĞI GELİRSE
                 if (data.type === 'header') {
                     incomingFileInfo = data;
                     receivedBytes = 0;
@@ -396,6 +457,7 @@
                     return;
                 }
 
+                // DOSYA PARÇASI GELİRSE
                 if (data.type === 'chunk') {
                     receiveBuffer.push(data.chunk);
                     receivedBytes += data.chunk.byteLength;
@@ -428,6 +490,31 @@
                 transferSection.classList.add('hidden');
             });
         }
+
+        // Metin Gönderme
+        sendTextBtn.addEventListener('click', () => {
+            const val = textToSend.value.trim();
+            if (val && conn && conn.open) {
+                conn.send({
+                    type: 'text',
+                    content: val
+                });
+                textToSend.value = '';
+            }
+        });
+
+        // Gelen Metni Kopyalama
+        copyTextBtn.addEventListener('click', () => {
+            const str = receivedText.textContent;
+            if (str) {
+                navigator.clipboard.writeText(str).then(() => {
+                    copyTextBtn.textContent = 'Kopyalandı! ✓';
+                    setTimeout(() => {
+                        copyTextBtn.textContent = 'Metni Kopyala';
+                    }, 2000);
+                });
+            }
+        });
 
         function sendFile(file) {
             if (!conn || !conn.open) return;
